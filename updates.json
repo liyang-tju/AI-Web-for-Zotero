@@ -1,7 +1,19 @@
 {
   "addons": {
     "chatgpt-web-sidebar-demo@local": {
-      "updates": []
+      "updates": [
+        {
+          "version": "1.0.2",
+          "update_link": "https://github.com/liyang-tju/AI-Web-for-Zotero/releases/download/v1.0.2/ai-web-for-zotero-1.0.2.xpi",
+          "update_hash": "sha256:c672c499d55b08ba6107a36cbffe35faa9c7994fec2071afdcd1f49a6fc58049",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "10.0",
+              "strict_max_version": "10.*"
+            }
+          }
+        }
+      ]
     }
   }
 }
