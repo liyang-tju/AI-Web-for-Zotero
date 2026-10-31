@@ -30,7 +30,7 @@ class Element {
 
 function fixture({ coverStyle = null, locale = 'zh-CN', language = '' } = {}) {
   const window = new Element();
-  const elements = Object.fromEntries(['browser', 'appcontent', 'zotero-tabs-toolbar', 'zotero-tab-cover', 'menu_ToolsPopup'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['browser', 'appcontent', 'zotero-tabs-toolbar', 'zotero-tab-cover', 'menu_ToolsPopup', 'zotero-itemmenu'].map(id => [id, new Element()]));
   if (coverStyle !== null) elements['zotero-tab-cover'].setAttribute('style', coverStyle);
   elements['zotero-tab-cover'].setAttribute('class', 'hidden');
   elements.browser.append(elements.appcontent);
@@ -79,6 +79,22 @@ test('continuous drag and internal resize notifications leave both pages station
   assert.deepEqual(f.prefs, [570]);
   f.flush();
   assert.equal(f.fitCount(), 0);
+});
+
+test('legacy menu follows actual sidebar attach, window unload and reload without duplicate UI', () => {
+  const f = fixture();
+  const popup = f.elements['zotero-itemmenu'];
+  assert.equal(popup.children.length, 1);
+  assert.equal(popup.listeners.get('popupshowing').size, 1);
+  f.scope.onMainWindowLoad({ window: f.window });
+  assert.equal(popup.children.length, 1);
+  f.scope.onMainWindowUnload({ window: f.window });
+  assert.equal(popup.children.length, 0);
+  assert.equal(popup.listeners.get('popupshowing').size, 0);
+  f.scope.onMainWindowLoad({ window: f.window });
+  assert.equal(popup.children.length, 1);
+  assert.equal(popup.listeners.get('popupshowing').size, 1);
+  assert.notEqual(f.scope.sidebarWindows.get(f.window), f.state);
 });
 
 test('cancelled drag preserves saved width and removes the overlay', () => {

@@ -48,7 +48,7 @@ function pageFixture(adapter) {
   const user=node('QUESTION');const answer=node('ANSWER');const draft=node('DRAFT',{composer:true});
   const doc={title:'讨论',location:{href:urls.find(url=>cSite(url)===adapter.id),origin:adapter.origin},querySelectorAll(selector){
     if(selector===adapter.user)return [user,draft];if(selector===adapter.assistant)return [answer];
-    if(selector===adapter.user+','+adapter.assistant)return [user,answer,draft];return [];
+    if(selector.startsWith(adapter.user+','+adapter.assistant))return [user,answer,draft];return [];
   }};
   function cSite(url){return scope().c.siteAdapter(url)?.id;}
   return {doc,user,answer};

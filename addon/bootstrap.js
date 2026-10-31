@@ -1,4 +1,4 @@
-/* AI Web for Zotero: an independent Zotero 10 website sidebar. */
+/* AI Web for Zotero: an independent Zotero 7–10 website sidebar. */
 var sidebarWindows = new Map();
 var stopped = false;
 var addonRootURI = null;
@@ -77,7 +77,9 @@ function unregisterSidebarLinks() {
 }
 
 function registerPDFContextMenu(pluginID) {
-  if (pdfContextMenuID) return;
+  // MenuManager was introduced in Zotero 8. Prefer capabilities over version
+  // strings, including builds that backport the official API.
+  if (pdfContextMenuID || !hasPDFMenuManager()) return;
   pdfContextMenuID = Zotero.MenuManager.registerMenu({
     menuID: "ai-web-sidebar-upload-pdf",
     pluginID,
@@ -86,12 +88,7 @@ function registerPDFContextMenu(pluginID) {
       menuType: "menuitem",
       icon: addonRootURI + "icons/upload.svg",
       onShowing(_event, context) {
-        context.menuElem.setAttribute("label", sidebarText("上传 PDF"));
-        const window = context.menuElem.ownerDocument.defaultView;
-        const state = sidebarWindows.get(window);
-        const hasPDF = pdfGroups(context.items || []).some(group => group.attachments.length);
-        context.setVisible(hasPDF);
-        context.setEnabled(hasPDF && !!state && !state.uploading && !state.savingBookmark && !state.exporting);
+        updatePDFContextMenu(context);
       },
       onCommand(_event, context) {
         const window = context.menuElem.ownerDocument.defaultView;
@@ -101,6 +98,58 @@ function registerPDFContextMenu(pluginID) {
       },
     }],
   });
+}
+
+function hasPDFMenuManager() {
+  return typeof Zotero.MenuManager?.registerMenu === "function"
+    && typeof Zotero.MenuManager?.unregisterMenu === "function";
+}
+
+function updatePDFContextMenu(context) {
+  context.menuElem.setAttribute("label", sidebarText("上传 PDF"));
+  const window = context.menuElem.ownerDocument.defaultView;
+  const state = sidebarWindows.get(window);
+  const hasPDF = pdfGroups(context.items || []).some(group => group.attachments.length);
+  context.setVisible(hasPDF);
+  context.setEnabled(hasPDF && !!state && !state.uploading && !state.savingBookmark && !state.exporting);
+}
+
+function attachLegacyPDFContextMenu(window, state) {
+  if (hasPDFMenuManager() || state.cleanupPDFContextMenu) return;
+  const popup = window.document.getElementById("zotero-itemmenu");
+  if (!popup) return;
+  const menu = window.document.createXULElement("menuitem");
+  menu.id = "ai-web-sidebar-upload-pdf";
+  menu.setAttribute("class", "menuitem-iconic");
+  menu.setAttribute("image", addonRootURI + "icons/upload.svg");
+  menu.hidden = true;
+  let selectedItems = [];
+  const onShowing = event => {
+    // Submenu popup events bubble through the library popup too.
+    if (event.target !== popup) return;
+    selectedItems = [...(window.ZoteroPane?.getSelectedItems() || [])];
+    updatePDFContextMenu({
+      menuElem: menu, items: selectedItems,
+      setVisible: visible => { menu.hidden = !visible; },
+      setEnabled: enabled => { menu.disabled = !enabled; },
+    });
+  };
+  const onCommand = () => {
+    if (menu.hidden || menu.disabled || sidebarWindows.get(window) !== state) return;
+    // Keep the opening selection even if the library selection changes. Do not
+    // clear on popuphidden: on some platforms it precedes command delivery.
+    return state.uploadSelectedPDFs([...selectedItems]);
+  };
+  popup.append(menu);
+  popup.addEventListener("popupshowing", onShowing);
+  menu.addEventListener("command", onCommand);
+  state.cleanupPDFContextMenu = () => {
+    popup.removeEventListener("popupshowing", onShowing);
+    menu.removeEventListener("command", onCommand);
+    menu.remove();
+    selectedItems = [];
+    state.cleanupPDFContextMenu = null;
+  };
 }
 
 function attachSidebar(window) {
@@ -584,12 +633,14 @@ function attachSidebar(window) {
     window.addEventListener("keydown", onKey, true);
   });
   sidebarWindows.set(window, state);
+  attachLegacyPDFContextMenu(window, state);
 }
 
 function removeSidebar(window) {
   pendingPDFPickers.get(window)?.();
   const state = sidebarWindows.get(window);
   if (!state) return;
+  state.cleanupPDFContextMenu?.();
   state.cleanupDrag?.();
   state.cancelUpload?.();
   state.cancelSiteInput?.();
@@ -849,7 +900,7 @@ function uploadFileInFrame(channel, adapter = null) {
       if (!validPage()) throw new Error("网页地址与所选网站不符，未添加附件。");
       const plusSelector = 'button[data-testid="composer-plus-btn"],button[aria-label="添加文件等内容"],button[aria-label="Add files and more"]';
       const otherSite = adapter && adapter.id !== 'chatgpt';
-      const historySelector = otherSite ? adapter.user + ',' + adapter.assistant : '[data-message-author-role]';
+      const historySelector = otherSite ? [adapter.user, adapter.assistant, adapter.history].filter(Boolean).join(',') : '[data-message-author-role]';
       const visible = node => node?.isConnected && node.getClientRects().length > 0
         && !node.closest?.('[hidden], [aria-hidden="true"], [inert]')
         && (!page.getComputedStyle || page.getComputedStyle(node).visibility !== 'hidden');
@@ -940,7 +991,8 @@ function uploadFileInFrame(channel, adapter = null) {
         let buttons = [...new Set([...doc.querySelectorAll(adapter.uploadMenuButton)].map(clickable))].filter(usable);
         const local = buttons.filter(button => button.closest(adapter.fileInputScope));
         if (local.length) buttons = local;
-        if (!buttons.length) buttons = [...doc.querySelectorAll(adapter.uploadMenuIcon)]
+        if (!buttons.length) buttons = [...new Set([...doc.querySelectorAll(adapter.uploadMenuIcon)]
+          .map(icon => icon.closest('button[aria-haspopup="menu"]')))]
           .filter(button => usable(button) && button.closest(adapter.fileInputScope));
         if (buttons.length === 1) {
           if (!validPage()) throw new Error("网页附件入口已变化，请重试。");
@@ -1363,10 +1415,26 @@ function collectConversationSnapshot(doc, adapter = null) {
     return bodies.length ? bodies.map(render).map(text => text.trim()).filter(Boolean).join("\n\n") : render(root).trim();
   }
   const external = adapter && adapter.id !== "chatgpt";
-  const users = external ? new Set(doc.querySelectorAll(adapter.user)) : null;
-  const assistants = external ? new Set(doc.querySelectorAll(adapter.assistant)) : null;
+  // Firefox 115 (Zotero 7) cannot query :has() by default. Keep relational
+  // selectors as data and test descendants explicitly in every host version.
+  function roleNodes(role) {
+    const nodes = new Set(doc.querySelectorAll(adapter[role]));
+    for (const rule of adapter[role + "Containers"] || []) {
+      for (const node of doc.querySelectorAll(rule.selector)) {
+        if (node.querySelector(rule.contains) && (!rule.excludes || !node.querySelector(rule.excludes))) nodes.add(node);
+      }
+    }
+    return nodes;
+  }
+  const users = external ? roleNodes("user") : null;
+  const assistants = external ? roleNodes("assistant") : null;
   if (external && (!users.size || !assistants.size)) throw new Error("未能同时识别用户消息和 AI 回复");
-  const containers = [...doc.querySelectorAll(external ? adapter.user + ',' + adapter.assistant : '[data-testid^="conversation-turn-"], article[data-turn]')];
+  const containerSelector = external ? [adapter.user, adapter.assistant,
+    ...(adapter.userContainers || []).map(rule => rule.selector),
+    ...(adapter.assistantContainers || []).map(rule => rule.selector)].join(',')
+    : '[data-testid^="conversation-turn-"], article[data-turn]';
+  const containers = [...doc.querySelectorAll(containerSelector)]
+    .filter(node => !external || users.has(node) || assistants.has(node));
   const roots = outermost(containers.length ? containers
     : external ? [] : [...doc.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]')]);
   const messages = [];

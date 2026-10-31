@@ -7,7 +7,12 @@ const { parseHTML } = require('linkedom');
 function actorScope() {
   const launches = [];
   const scope = vm.createContext({ URL, JSWindowActorChild: class {}, JSWindowActorParent: class {},
-    ChromeUtils: { defineESModuleGetters() {} }, Zotero: { launchURL: url => launches.push(url) } });
+    ChromeUtils: { defineESModuleGetters(target, modules) {
+      // This exact module is present even in Zotero 7.0.0. Never fall back to
+      // Services.jsm (removed in newer hosts) or a guessed Zotero JSM path.
+      assert.equal(modules.Zotero, 'chrome://zotero/content/zotero.mjs');
+      Object.defineProperty(target, 'Zotero', { get: () => ({ launchURL: url => launches.push(url) }) });
+    } } });
   for (const side of ['Child', 'Parent']) {
     const name = `AIWebSidebarLinks${side}`;
     const source = fs.readFileSync(`${__dirname}/../addon/actors/${name}.mjs`, 'utf8');

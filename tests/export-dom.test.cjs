@@ -3,11 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { parseHTML } = require('linkedom');
+const { rejectHasSelectors } = require('./helpers/legacy-selectors.cjs');
 const source = ['ui.js', 'providers.js', 'settings.js', 'bootstrap.js']
   .map(file => fs.readFileSync(`${__dirname}/../addon/${file}`, 'utf8')).join('\n');
 
 function snapshot(html, url = 'https://www.kimi.com/chat/test') {
   const { document, window } = parseHTML(`<html><body>${html}</body></html>`);
+  rejectHasSelectors(window);
   window.Element.prototype.getClientRects = () => [{}];
   document.location = { href: url };
   const context = vm.createContext({});
@@ -125,6 +127,25 @@ test('DeepSeek structural user bubble works without legacy hashed text class', (
     <div class="ds-message"><div class="ds-assistant-message-main-content"><div class="ds-markdown">Answer</div></div></div>`,
     'https://chat.deepseek.com/a/chat/s/new');
   assert.deepEqual(messages.map(message => message.markdown), ['Question', 'Answer']);
+});
+
+test('legacy selectors keep AI Studio outer turns in order without duplicating nested role markers', () => {
+  const messages = snapshot(`<ms-chat-turn><div data-turn-role="User">Q1</div></ms-chat-turn>
+    <ms-chat-turn><div data-turn-role="Model"><ms-cmark-node>A1</ms-cmark-node></div></ms-chat-turn>
+    <ms-chat-turn><div data-turn-role="User">Q2</div></ms-chat-turn>
+    <ms-chat-turn><div data-turn-role="Model"><ms-cmark-node>A2</ms-cmark-node></div></ms-chat-turn>`,
+    'https://aistudio.google.com/prompts/test');
+  assert.deepEqual(messages.map(message => [message.role, message.markdown]),
+    [['user', 'Q1'], ['assistant', 'A1'], ['user', 'Q2'], ['assistant', 'A2']]);
+});
+
+test('legacy DeepSeek relational rules do not export thinking as a user turn', () => {
+  const messages = snapshot(`<div class="ds-message"><div class="ds-collapsible-text">Question</div></div>
+    <div class="ds-message"><div class="ds-think-content"><div class="ds-collapsible-text">PRIVATE</div></div></div>
+    <div class="ds-message"><div class="ds-collapsible-text">PRIVATE HEADER</div>
+      <div class="ds-assistant-message-main-content"><div class="ds-markdown">Answer</div></div></div>`,
+    'https://chat.deepseek.com/a/chat/s/test');
+  assert.deepEqual(messages.map(message => [message.role, message.markdown]), [['user', 'Question'], ['assistant', 'Answer']]);
 });
 
 test('China GLM uses real question/answer rows and exports PDF-only turns without names or thinking', () => {

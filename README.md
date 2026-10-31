@@ -9,7 +9,7 @@
 
 [下载插件](https://github.com/liyang-tju/AI-Web-for-Zotero/releases/latest) · [反馈问题](https://github.com/liyang-tju/AI-Web-for-Zotero/issues)
 
-**支持 Zotero 10。** 无需 API Key，直接登录网站账号即可使用。
+支持**Zotero 7-10**。无需 API Key，直接登录网站账号即可使用。
 
 ## 主要功能
 
@@ -45,7 +45,7 @@
 
 ChatGPT、Gemini、Google AI Studio、DeepSeek、Kimi、智谱清言。
 
-也可以输入自定义网址；自定义网站仅提供网页浏览，不保证上传和对话导出功能。网站改版可能影响适配，遇到问题可在 [Issues](https://github.com/liyang-tju/AI-Web-for-Zotero/issues) 中附上网站名称、Zotero 版本和错误提示。
+也可以输入自定义网址，遇到问题可在 [Issues](https://github.com/liyang-tju/AI-Web-for-Zotero/issues) 中附上网站名称、Zotero 版本和错误提示。
 
 ## 许可证
 

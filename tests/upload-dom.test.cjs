@@ -3,12 +3,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { parseHTML } = require('linkedom');
+const { rejectHasSelectors } = require('./helpers/legacy-selectors.cjs');
 const source = ['ui.js', 'providers.js', 'settings.js', 'bootstrap.js'].map(name => fs.readFileSync(`${__dirname}/../addon/${name}`, 'utf8')).join('\n');
 
 // Structural regression fixtures, not snapshots of a logged-in website.
 // A real DOM/CSS engine exercises nesting, selectors and node replacement.
 function fixture(url, markup, onChange = () => {}, onTick = () => {}) {
   const { document, window } = parseHTML(`<html><body>${markup}</body></html>`);
+  rejectHasSelectors(window);
   window.Element.prototype.getClientRects = function () { return this.closest('[hidden]') ? [] : [{}]; };
   document.location = { href: url, origin: new URL(url).origin };
   const listeners = new Map(), outputs = [], received = [];

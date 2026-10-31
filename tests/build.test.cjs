@@ -29,6 +29,8 @@ if __name__ == '__main__':
 test('release manifest meets Zotero-specific installation requirements', () => {
   assert.equal(validate(manifest).valid, true);
   assert.equal(manifest.applications.zotero.id, 'chatgpt-web-sidebar-demo@local');
+  assert.equal(manifest.applications.zotero.strict_min_version, '7.0');
+  assert.equal(manifest.applications.zotero.strict_max_version, '10.*');
   assert.equal(manifest.applications.zotero.update_url,
     'https://raw.githubusercontent.com/liyang-tju/AI-Web-for-Zotero/main/updates.json');
 });

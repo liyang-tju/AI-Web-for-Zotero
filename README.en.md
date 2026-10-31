@@ -9,7 +9,7 @@ Upload multiple PDFs, bookmark conversations, and export chat history.
 
 [Download](https://github.com/liyang-tju/AI-Web-for-Zotero/releases/latest) · [Report an issue](https://github.com/liyang-tju/AI-Web-for-Zotero/issues)
 
-**Supports Zotero 10.** No API key is required. Sign in with your account on the website to get started.
+**Supports Zotero 7–10.** No API key is required. Sign in with your account on the website to get started.
 
 ## Features
 
@@ -45,7 +45,7 @@ Click the website button at the top right of Zotero, or open **Tools → AI Web 
 
 ChatGPT, Gemini, Google AI Studio, DeepSeek, Kimi, and GLM / ChatGLM (智谱清言).
 
-You can also enter a custom URL. Custom websites support browsing, but PDF uploads and conversation export are not guaranteed. Website changes may affect compatibility. If you run into a problem, include the website name, Zotero version, and error message in an [issue](https://github.com/liyang-tju/AI-Web-for-Zotero/issues).
+You can also enter a custom URL. If you run into a problem, include the website name, Zotero version, and error message in an [issue](https://github.com/liyang-tju/AI-Web-for-Zotero/issues).
 
 ## License
 
