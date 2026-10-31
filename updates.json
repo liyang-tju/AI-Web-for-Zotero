@@ -3,12 +3,12 @@
     "chatgpt-web-sidebar-demo@local": {
       "updates": [
         {
-          "version": "1.0.2",
-          "update_link": "https://github.com/liyang-tju/AI-Web-for-Zotero/releases/download/v1.0.2/ai-web-for-zotero-1.0.2.xpi",
-          "update_hash": "sha256:c672c499d55b08ba6107a36cbffe35faa9c7994fec2071afdcd1f49a6fc58049",
+          "version": "1.1.0",
+          "update_link": "https://github.com/liyang-tju/AI-Web-for-Zotero/releases/download/v1.1.0/ai-web-for-zotero-1.1.0.xpi",
+          "update_hash": "sha256:d35649f195c90834eca0eda244bf6b51778ae6e5deb53402e9b644deff0a3e70",
           "applications": {
             "zotero": {
-              "strict_min_version": "10.0",
+              "strict_min_version": "7.0",
               "strict_max_version": "10.*"
             }
           }
