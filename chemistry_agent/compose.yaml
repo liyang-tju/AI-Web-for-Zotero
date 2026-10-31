@@ -1,0 +1,64 @@
+name: chemistry-agent
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-python:3.11-slim-bookworm}
+    image: chemistry-agent:local
+    restart: unless-stopped
+    init: true
+    env_file: ${AGENT_ENV_FILE:-.env.server}
+    environment:
+      CHEMISTRY_AUTH_ENABLED: "true"
+      CHEMISTRY_COOKIE_SECURE: "true"
+      CHEMISTRY_HOST: 0.0.0.0
+      CHEMISTRY_PORT: "8765"
+      CHEMISTRY_DATABASE_PATH: /data/agent.sqlite3
+      CHEMISTRY_TOKENIZER_PATH: /opt/chemistry/deepseek-tokenizer.json
+      # App port is private to the Compose network; Caddy is its only public ingress.
+      CHEMISTRY_TRUSTED_PROXY_IPS: "*"
+    expose:
+      - "8765"
+    volumes:
+      - agent_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=67108864,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2}
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      SITE_HOST: ${SITE_HOST:?Set SITE_HOST in .env.server and pass --env-file .env.server}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  agent_data:
+  caddy_data:
+  caddy_config:

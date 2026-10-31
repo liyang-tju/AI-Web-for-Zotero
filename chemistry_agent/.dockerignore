@@ -1,0 +1,13 @@
+# Allowlist the build context; credentials, local databases and virtualenvs never enter it.
+**
+!Dockerfile
+!pyproject.toml
+!constraints.txt
+!README.md
+!LICENSE
+!src/
+!src/**
+!scripts/
+!scripts/setup_tokenizer.py
+**/__pycache__/
+**/*.pyc
